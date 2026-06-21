@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CREATED BY HARSH - Bulk Renamer</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1a1a1a; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #555; }
+    </style>
+</head>
+<body class="bg-[#050505] text-gray-100 font-sans selection:bg-purple-500/30 selection:text-purple-200 h-screen overflow-hidden flex flex-col">
+    <div id="root" class="h-full flex flex-col"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // --- ICONS ---
+        const Upload = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>;
+        const Download = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>;
+        const Loader2 = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>;
+        const ImageIcon = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>;
+        const Trash2 = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>;
+        const Sparkles = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/><path d="M5 3v4"/><path d="M9 5h4"/><path d="M18 18v4"/><path d="M14 20h4"/></svg>;
+        const X = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>;
+        const FileText = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg>;
+        const Layers = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>;
+        const Copyright = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="M14.83 14.83a4 4 0 1 1 0-5.66"/></svg>;
+        const RefreshCw = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>;
+        const PlusCircle = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>;
+        const List = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="8" x2="21" y1="6" y2="6"/><line x1="8" x2="21" y1="12" y2="12"/><line x1="8" x2="21" y1="18" y2="18"/><line x1="3" x2="3.01" y1="6" y2="6"/><line x1="3" x2="3.01" y1="12" y2="12"/><line x1="3" x2="3.01" y1="18" y2="18"/></svg>;
+        const AlertTriangle = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>;
+        const Wand2 = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72Z"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></svg>;
+        const Edit2 = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>;
+        const Check = ({ className }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><polyline points="20 6 9 17 4 12"/></svg>;
+
+        const App = () => {
+            const [queue, setQueue] = useState([]);
+            const [bgImage, setBgImage] = useState(null);
+            const [bgImageObj, setBgImageObj] = useState(null);
+            const [barcodesInput, setBarcodesInput] = useState(''); 
+            const [processing, setProcessing] = useState(false);
+            const [progress, setProgress] = useState(0);
+            const [duplicates, setDuplicates] = useState([]);
+            const [editingId, setEditingId] = useState(null); // New State for Edit
+
+            const canvasRef = useRef(null);
+            const textareaRef = useRef(null);
+
+            useEffect(() => {
+                if (bgImageObj) {
+                    renderPreview();
+                }
+
+                const lines = barcodesInput.split('\n').map(l => l.trim()).filter(l => l !== '');
+                const counts = {};
+                const dups = [];
+                
+                lines.forEach(line => {
+                    counts[line] = (counts[line] || 0) + 1;
+                });
+
+                Object.keys(counts).forEach(key => {
+                    if (counts[key] > 1) {
+                        dups.push(key);
+                    }
+                });
+
+                const queueNames = new Set();
+                queue.forEach(batch => {
+                    if (batch.id !== editingId) { // Don't check against self if editing
+                        batch.names.forEach(name => queueNames.add(name));
+                    }
+                });
+
+                lines.forEach(line => {
+                    if (queueNames.has(line) && !dups.includes(line)) {
+                        dups.push(line + " (Already in Queue)");
+                    }
+                });
+
+                setDuplicates(dups);
+
+            }, [bgImageObj, barcodesInput, queue, editingId]);
+
+            const handleImageUpload = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            setBgImageObj(img);
+                            setBgImage(event.target.result);
+                            if (textareaRef.current) {
+                                textareaRef.current.focus();
+                            }
+                        };
+                        img.src = event.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            const handleResetCurrent = () => {
+                setBgImage(null);
+                setBgImageObj(null);
+                setBarcodesInput('');
+                const fileInput = document.getElementById('fileUploadInput');
+                if (fileInput) fileInput.value = '';
+                setDuplicates([]); 
+                setEditingId(null);
+            };
+
+            const handleClearQueue = () => {
+                setQueue([]);
+            };
+
+            const handleResetAll = () => {
+                handleResetCurrent();
+                handleClearQueue();
+            };
+
+            const handleAutoFix = () => {
+                const lines = barcodesInput.split('\n');
+                const cleanLines = lines.map(l => l.trim()).filter(l => l !== '');
+                const queueNames = new Set();
+                queue.forEach(batch => {
+                    if (batch.id !== editingId) {
+                        batch.names.forEach(name => queueNames.add(name));
+                    }
+                });
+
+                const counts = {}; 
+                const fixedLines = cleanLines.map(line => {
+                    let newName = line;
+                    let attempt = 1;
+                    while (counts[newName] || queueNames.has(newName)) {
+                        attempt++;
+                        newName = `${line}_${attempt}`;
+                    }
+                    counts[newName] = true;
+                    return newName;
+                });
+                
+                setBarcodesInput(fixedLines.join('\n'));
+                if (textareaRef.current) {
+                    textareaRef.current.focus();
+                }
+            };
+
+            const addToQueue = () => {
+                if (duplicates.length > 0) {
+                    alert("Duplicate names found! Please fix them first.");
+                    return;
+                }
+                if (!bgImage || !barcodesInput.trim()) {
+                    alert("Please upload image and enter names.");
+                    return;
+                }
+                
+                if (editingId) {
+                    // UPDATE Existing Batch
+                    setQueue(queue.map(batch => {
+                        if (batch.id === editingId) {
+                            return {
+                                ...batch,
+                                image: bgImage,
+                                names: barcodesInput.split('\n').filter(l => l.trim() !== ''),
+                                previewName: barcodesInput.split('\n').filter(l => l.trim() !== '')[0] || 'Batch'
+                            };
+                        }
+                        return batch;
+                    }));
+                    setEditingId(null);
+                } else {
+                    // ADD New Batch
+                    const newBatch = {
+                        id: Date.now(),
+                        image: bgImage, 
+                        names: barcodesInput.split('\n').filter(l => l.trim() !== ''),
+                        previewName: barcodesInput.split('\n').filter(l => l.trim() !== '')[0] || 'Batch'
+                    };
+                    setQueue([...queue, newBatch]);
+                }
+                
+                handleResetCurrent(); 
+                
+                setTimeout(() => {
+                    if (textareaRef.current) {
+                        textareaRef.current.focus();
+                    }
+                }, 50);
+            };
+
+            const handleEditBatch = (batch) => {
+                setEditingId(batch.id);
+                setBarcodesInput(batch.names.join('\n'));
+                setBgImage(batch.image);
+                
+                const img = new Image();
+                img.onload = () => {
+                    setBgImageObj(img);
+                    if (textareaRef.current) {
+                        textareaRef.current.focus();
+                    }
+                };
+                img.src = batch.image;
+            };
+
+            const removeFromQueue = (id) => {
+                setQueue(queue.filter(batch => batch.id !== id));
+                if (editingId === id) {
+                    handleResetCurrent();
+                }
+            };
+
+            const renderPreview = () => {
+                if (!bgImageObj || !canvasRef.current) return;
+                const canvas = canvasRef.current;
+                const ctx = canvas.getContext('2d');
+                const previewWidth = 800; 
+                const scaleFactor = previewWidth / bgImageObj.width;
+                canvas.width = previewWidth;
+                canvas.height = bgImageObj.height * scaleFactor;
+                ctx.drawImage(bgImageObj, 0, 0, canvas.width, canvas.height);
+            };
+
+            const loadImage = (src) => {
+                return new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.src = src;
+                });
+            };
+
+            const generateAndDownload = async () => {
+                if (queue.length === 0) {
+                    alert("Queue is empty! Add batches first.");
+                    return;
+                }
+
+                setProcessing(true);
+                setProgress(0);
+
+                let zip = new window.JSZip();
+
+                try {
+                    const totalFiles = queue.reduce((acc, batch) => acc + batch.names.length, 0);
+                    let processedCount = 0;
+
+                    const workCanvas = document.createElement('canvas');
+                    const ctx = workCanvas.getContext('2d');
+
+                    for (let b = 0; b < queue.length; b++) {
+                        const batch = queue[b];
+                        const batchImg = await loadImage(batch.image);
+                        
+                        workCanvas.width = batchImg.width;
+                        workCanvas.height = batchImg.height;
+
+                        for (let i = 0; i < batch.names.length; i++) {
+                            const code = batch.names[i];
+                            
+                            ctx.clearRect(0, 0, workCanvas.width, workCanvas.height);
+                            ctx.drawImage(batchImg, 0, 0);
+
+                            const blob = await new Promise(resolve => workCanvas.toBlob(resolve, 'image/jpeg', 0.95));
+                            const safeName = code.replace(/[\\/:*?"<>|]/g, '_');
+
+                            zip.file(`${safeName}.jpg`, blob);
+
+                            processedCount++;
+                            setProgress(Math.round((processedCount / totalFiles) * 100));
+                            await new Promise(r => setTimeout(r, 5));
+                        }
+                    }
+
+                    const content = await zip.generateAsync({ type: "blob" });
+                    const date = new Date();
+                    const timestamp = `${date.getHours()}-${date.getMinutes()}-${date.getSeconds()}`;
+                    const uniqueZipName = `harsh_gohil_2026_multi_${timestamp}.zip`;
+
+                    if (window.showSaveFilePicker) {
+                        try {
+                            const handle = await window.showSaveFilePicker({
+                                suggestedName: uniqueZipName,
+                                types: [{ description: 'ZIP Archive', accept: {'application/zip': ['.zip']} }],
+                            });
+                            const writable = await handle.createWritable();
+                            await writable.write(content);
+                            await writable.close();
+                        } catch (err) {
+                            if (err.name !== 'AbortError') window.saveAs(content, uniqueZipName);
+                        }
+                    } else {
+                        window.saveAs(content, uniqueZipName);
+                    }
+
+                } catch (err) {
+                    console.error(err);
+                    alert("Error: " + err.message);
+                }
+
+                setProcessing(false);
+                setProgress(0);
+            };
+
+            return (
+                <div className="h-full flex flex-col">
+                    <div className="fixed inset-0 z-0">
+                        <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-purple-900/20 rounded-full blur-[120px]" />
+                        <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-blue-900/20 rounded-full blur-[120px]" />
+                    </div>
+
+                    <header className="relative z-10 border-b border-white/5 bg-black/20 backdrop-blur-xl shrink-0">
+                        <div className="max-w-full mx-auto px-4 py-3 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-gradient-to-br from-purple-600 to-indigo-600 p-2 rounded-xl shadow-lg shadow-purple-500/20">
+                                    <Layers className="w-5 h-5 text-white" />
+                                </div>
+                                <div>
+                                    <h1 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-200 to-gray-400">
+                                        CREATED BY HARSH
+                                    </h1>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                                <button onClick={handleResetAll} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 transition-all text-xs font-bold tracking-wider uppercase">
+                                    <RefreshCw className="w-3 h-3" /> Reset All
+                                </button>
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="relative z-10 flex-1 overflow-hidden p-2 md:p-4">
+                        <div className="h-full grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-4">
+                            
+                            {/* LEFT SIDE: Inputs - SCROLLABLE */}
+                            <div className="lg:col-span-4 flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-1 h-full">
+                                {/* Upload Card - Shrink 0 to keep fixed size */}
+                                <div className={`group relative border rounded-2xl p-1 shadow-2xl shrink-0 transition-all duration-300 ${editingId ? 'border-yellow-500/50 bg-yellow-900/10' : 'bg-[#111] border-white/10'}`}>
+                                    <div className="bg-[#0a0a0a] rounded-xl p-4 h-full relative">
+                                        <div className="flex justify-between items-center mb-3">
+                                            <h2 className={`flex items-center text-xs font-bold tracking-wider uppercase ${editingId ? 'text-yellow-500' : 'text-gray-400'}`}>
+                                                <ImageIcon className={`w-4 h-4 mr-2 ${editingId ? 'text-yellow-500' : 'text-purple-500'}`} /> {editingId ? 'Editing Image' : '1. Select Image'}
+                                            </h2>
+                                            {bgImage && (
+                                                <button onClick={handleResetCurrent} className="p-1 rounded-full hover:bg-red-500/10 text-gray-500 hover:text-red-500 transition-colors">
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                        </div>
+                                        <div className="relative w-full aspect-[21/9] md:aspect-[4/3]">
+                                            <input id="fileUploadInput" type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20" />
+                                            <div className={`w-full h-full rounded-lg border-2 border-dashed flex flex-col items-center justify-center transition-all duration-300 overflow-hidden ${bgImage ? 'border-purple-500/50 bg-purple-900/10' : 'border-white/10 hover:border-purple-500 hover:bg-white/5'}`}>
+                                                {bgImage ? (
+                                                    <div className="relative w-full h-full p-1 flex items-center justify-center bg-black/50">
+                                                        <canvas ref={canvasRef} className="max-w-full max-h-full object-contain" />
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-center p-4">
+                                                        <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-2 group-hover:scale-110 transition-transform"><Upload className="w-5 h-5 text-gray-400" /></div>
+                                                        <p className="text-xs font-medium text-gray-300">Upload Image</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Filenames - Grows to fill space */}
+                                <div className={`flex-1 border rounded-2xl p-1 shadow-2xl flex flex-col min-h-[300px] transition-all duration-300 ${editingId ? 'border-yellow-500/50 bg-yellow-900/10' : 'bg-[#111] border-white/10'}`}>
+                                    <div className="bg-[#0a0a0a] rounded-xl p-4 h-full flex flex-col relative">
+                                        <div className="flex justify-between items-center mb-3">
+                                            <h2 className={`flex items-center text-xs font-bold tracking-wider uppercase pb-1 ${editingId ? 'text-yellow-500' : 'text-gray-400'}`}>
+                                                <FileText className={`w-4 h-4 mr-2 ${editingId ? 'text-yellow-500' : 'text-blue-500'}`} /> {editingId ? 'Editing Filenames' : '2. Filenames'}
+                                            </h2>
+                                            <div className="flex gap-3">
+                                                {/* Queue Count Display */}
+                                                <div className="hidden sm:flex bg-purple-500/10 text-purple-400 px-3 py-1.5 rounded-lg border border-purple-500/20 font-mono items-center">
+                                                     <span className="text-xl font-bold mr-2 tracking-tighter">{queue.length}</span>
+                                                     <span className="text-[10px] uppercase font-bold tracking-wide opacity-80">In Queue</span>
+                                                </div>
+
+                                                {/* Scanned Count Display */}
+                                                <div className="bg-blue-500/20 text-blue-300 px-4 py-1.5 rounded-lg border border-blue-500/30 font-mono flex items-center shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+                                                    <span className="text-2xl font-bold mr-2 tracking-tighter">{barcodesInput.split('\n').filter(l => l.trim() !== '').length}</span>
+                                                    <span className="text-[10px] uppercase font-bold tracking-wide opacity-80">Scanned</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="relative flex-1 flex flex-col">
+                                            <textarea 
+                                                ref={textareaRef}
+                                                value={barcodesInput} 
+                                                onChange={(e) => setBarcodesInput(e.target.value)} 
+                                                placeholder="Enter filenames...&#10;Scan here..." 
+                                                className={`w-full h-full bg-[#151515] border rounded-lg p-3 text-sm font-mono focus:outline-none focus:ring-2 resize-none leading-relaxed custom-scrollbar placeholder:text-gray-700
+                                                    ${duplicates.length > 0 
+                                                        ? 'border-red-500 text-red-200 focus:ring-red-500/50 bg-red-500/5' 
+                                                        : editingId 
+                                                            ? 'border-yellow-500/50 text-yellow-100 focus:ring-yellow-500/50'
+                                                            : 'border-white/10 text-gray-300 focus:ring-blue-500/50'}
+                                                `} 
+                                            />
+                                            {duplicates.length > 0 && (
+                                                <div className="mt-2 bg-red-500/10 border border-red-500/30 rounded-lg p-2 flex items-center justify-between gap-2 animate-pulse">
+                                                    <div className="flex items-center text-red-400 text-xs font-bold">
+                                                        <AlertTriangle className="w-3 h-3 mr-1.5 flex-shrink-0" />
+                                                        <span className="truncate">Duplicate Found!</span>
+                                                    </div>
+                                                    <button onClick={handleAutoFix} className="flex items-center px-2 py-1 bg-red-500 hover:bg-red-600 text-white text-[10px] font-bold rounded transition-colors shadow-lg whitespace-nowrap">
+                                                        <Wand2 className="w-3 h-3 mr-1" /> Fix
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <div className="mt-3 pt-3 border-t border-white/5 flex gap-2">
+                                            {editingId && (
+                                                <button 
+                                                    onClick={handleResetCurrent} 
+                                                    className="px-4 py-3 rounded-lg font-bold text-sm tracking-wide uppercase transition-all bg-gray-700 hover:bg-gray-600 text-white"
+                                                >
+                                                    Cancel
+                                                </button>
+                                            )}
+                                            <button 
+                                                onClick={addToQueue} 
+                                                disabled={!bgImage || !barcodesInput.trim() || duplicates.length > 0} 
+                                                className={`flex-1 py-3 rounded-lg font-bold text-sm tracking-wide uppercase transition-all flex items-center justify-center gap-2 
+                                                    ${!bgImage || !barcodesInput.trim() || duplicates.length > 0 
+                                                        ? 'bg-white/5 text-gray-600 cursor-not-allowed opacity-50' 
+                                                        : editingId 
+                                                            ? 'bg-yellow-600 hover:bg-yellow-500 text-white shadow-lg'
+                                                            : 'bg-blue-600 hover:bg-blue-500 text-white shadow-lg hover:scale-[1.01]'}
+                                                `}
+                                            >
+                                                {editingId ? <><Check className="w-4 h-4" /> Update Batch</> : <><PlusCircle className="w-4 h-4" /> Add to Queue</>}
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* RIGHT SIDE - QUEUE (FULL HEIGHT) */}
+                            <div className="lg:col-span-8 flex flex-col h-full overflow-hidden">
+                                {/* QUEUE LIST */}
+                                <div className="flex-1 bg-[#111] border border-white/10 rounded-2xl p-4 shadow-xl flex flex-col h-full">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider flex items-center gap-2">
+                                            <List className="w-4 h-4 text-purple-400" /> Processing Queue
+                                        </h3>
+                                        <div className="flex items-center gap-2">
+                                            {queue.length > 0 && (
+                                                <button onClick={handleClearQueue} className="text-[10px] bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white px-2 py-1 rounded border border-red-500/20 transition-all uppercase font-bold">
+                                                    Clear Queue
+                                                </button>
+                                            )}
+                                            <span className="text-xs text-gray-500 bg-white/5 px-2 py-1 rounded">{queue.length} Batches</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="flex-1 bg-[#0a0a0a] rounded-xl border border-white/5 overflow-y-auto custom-scrollbar p-2 space-y-2">
+                                        {queue.length === 0 ? (
+                                            <div className="h-full flex flex-col items-center justify-center text-gray-600 py-10">
+                                                <Layers className="w-8 h-8 mb-2 opacity-50" />
+                                                <p className="text-sm">Queue is empty</p>
+                                                <p className="text-xs">Add photos and names from the left</p>
+                                            </div>
+                                        ) : (
+                                            queue.map((batch, idx) => (
+                                                <div 
+                                                    key={batch.id} 
+                                                    onDoubleClick={() => handleEditBatch(batch)}
+                                                    className={`flex items-center gap-3 p-2 rounded-lg border transition-colors cursor-pointer group
+                                                        ${editingId === batch.id ? 'bg-yellow-900/20 border-yellow-500/50' : 'bg-[#151515] border-white/5 hover:border-white/20'}
+                                                    `}
+                                                >
+                                                    <div className={`w-6 h-6 rounded flex items-center justify-center text-xs font-mono 
+                                                        ${editingId === batch.id ? 'bg-yellow-500 text-black' : 'bg-black/50 text-gray-500'}
+                                                    `}>#{idx+1}</div>
+                                                    
+                                                    <img src={batch.image} className="w-10 h-10 object-cover rounded bg-black" />
+                                                    
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className={`text-sm font-medium truncate ${editingId === batch.id ? 'text-yellow-200' : 'text-gray-200'}`}>
+                                                            {batch.names.length} Files
+                                                        </p>
+                                                        <p className="text-[10px] text-gray-500 truncate">First: {batch.previewName}</p>
+                                                    </div>
+
+                                                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                        <button 
+                                                            onClick={(e) => { e.stopPropagation(); handleEditBatch(batch); }} 
+                                                            className="p-1.5 hover:bg-blue-500/10 text-gray-500 hover:text-blue-400 rounded transition-colors"
+                                                            title="Edit Batch"
+                                                        >
+                                                            <Edit2 className="w-4 h-4" />
+                                                        </button>
+                                                        <button 
+                                                            onClick={(e) => { e.stopPropagation(); removeFromQueue(batch.id); }} 
+                                                            className="p-1.5 hover:bg-red-500/10 text-gray-500 hover:text-red-500 rounded transition-colors"
+                                                            title="Remove Batch"
+                                                        >
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+
+                                    <div className="mt-4 pt-4 border-t border-white/10">
+                                        <button onClick={generateAndDownload} disabled={processing || queue.length === 0} className={`w-full flex items-center justify-center px-4 py-3 rounded-xl font-bold text-base tracking-wide transition-all border border-purple-500/30 ${processing || queue.length === 0 ? 'bg-white/5 text-gray-600 cursor-not-allowed opacity-50' : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:shadow-xl hover:scale-[1.01]'}`}>
+                                            <Download className="w-5 h-5 mr-2" /> DOWNLOAD ZIP
+                                        </button>
+                                    </div>
+                                    
+                                    {processing && (
+                                        <div className="mt-2 text-center">
+                                            <div className="w-full bg-white/5 rounded-full h-1 overflow-hidden">
+                                                <div className="bg-purple-500 h-full transition-all duration-300" style={{ width: `${progress}%` }}></div>
+                                            </div>
+                                            <p className="text-[10px] text-purple-400 mt-1">Processing... {progress}%</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </main>
+                    
+                    <footer className="shrink-0 py-2 text-center border-t border-white/5 bg-black/20">
+                        <p className="text-[10px] text-gray-600 font-medium tracking-widest flex items-center justify-center gap-1">
+                            <Copyright className="w-3 h-3" /> HARSH GOHIL
+                        </p>
+                    </footer>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
